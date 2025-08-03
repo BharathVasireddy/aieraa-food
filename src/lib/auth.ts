@@ -3,7 +3,19 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 
 import { prisma } from '@/lib/prisma';
-import { UserRole, UserStatus } from '@prisma/client';
+
+// Define types locally to avoid Prisma import issues
+type UserRole = 'ADMIN' | 'MANAGER' | 'STUDENT';
+type UserStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+// Validate required environment variables
+if (!process.env.NEXTAUTH_SECRET) {
+  throw new Error('NEXTAUTH_SECRET environment variable is required');
+}
+
+if (!process.env.NEXTAUTH_URL && process.env.NODE_ENV === 'production') {
+  throw new Error('NEXTAUTH_URL environment variable is required in production');
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -51,11 +63,11 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Check if user is approved (for students)
-          if (user.status === UserStatus.PENDING) {
+          if (user.status === 'PENDING') {
             throw new Error('Your account is pending approval from your university manager');
           }
 
-          if (user.status === UserStatus.REJECTED) {
+          if (user.status === 'REJECTED') {
             throw new Error('Your account has been rejected. Please contact your university manager');
           }
 
@@ -86,6 +98,11 @@ export const authOptions: NextAuthOptions = {
   },
   callbacks: {
     async jwt({ token, user }) {
+      // Debug logging for production issues
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔐 JWT callback - User:', !!user, 'Token sub:', token.sub);
+      }
+      
       if (user) {
         token.role = user.role;
         token.status = user.status;
@@ -95,6 +112,16 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
+      // Debug logging for production issues
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔐 Session callback - Token sub:', token.sub, 'Token role:', token.role);
+      }
+      
+      if (!token.sub) {
+        console.error('❌ No token.sub found in session callback');
+        throw new Error('Invalid session token');
+      }
+      
       session.user.id = token.sub as string;
       session.user.role = token.role as UserRole;
       session.user.status = token.status as string;
@@ -107,4 +134,19 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
+  // Add better error handling for production
+  events: {
+    async signIn({ user, account }) {
+      console.log('✅ Sign in event:', { user: user.email, account: account?.provider });
+    },
+    async signOut({ session }) {
+      console.log('👋 Sign out event:', { user: session?.user?.email });
+    },
+    async session({ session }) {
+      if (process.env.NODE_ENV === 'production') {
+        console.log('🔄 Session event:', { user: session?.user?.email, role: session?.user?.role });
+      }
+    },
+  },
 };
