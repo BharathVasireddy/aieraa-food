@@ -1,7 +1,6 @@
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/prisma"
+// Using API endpoints instead of direct database access
 import { UserRole } from "@prisma/client"
 
 export const authOptions: NextAuthOptions = {
@@ -17,41 +16,38 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Email and password are required")
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-          include: { university: true }
-        })
+        try {
+          // Use our login API for consistency
+          const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: credentials.email,
+              password: credentials.password,
+            }),
+          });
 
-        if (!user) {
-          throw new Error("Invalid email or password")
-        }
+          const data = await response.json();
 
-        const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
+          if (!response.ok) {
+            throw new Error(data.error || 'Authentication failed');
+          }
 
-        if (!isPasswordValid) {
-          throw new Error("Invalid email or password")
-        }
+          const user = data.user;
 
-        if (user.status === "REJECTED") {
-          throw new Error("Your account has been rejected")
-        }
-
-        if (user.status === "SUSPENDED") {
-          throw new Error("Your account has been suspended")
-        }
-
-        if (user.status === "PENDING" && user.role === "STUDENT") {
-          throw new Error("Your account is pending approval from your university manager")
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          status: user.status,
-          universityId: user.universityId || undefined,
-          university: user.university?.name || undefined,
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            status: user.status,
+            universityId: user.universityId || undefined,
+            university: user.university?.name || undefined,
+          };
+        } catch (error) {
+          throw new Error(error instanceof Error ? error.message : 'Authentication failed');
         }
       }
     })
