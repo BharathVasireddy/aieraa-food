@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { useSession } from 'next-auth/react';
 
 import { ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -20,11 +23,14 @@ interface University {
 }
 
 export default function RegisterPage() {
+  // All hooks must be called before any conditional logic
   const [universities, setUniversities] = useState<University[]>([]);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const router = useRouter();
+  const { data: session, status } = useSession();
 
   // Form validation states
   const [formData, setFormData] = useState({
@@ -42,6 +48,23 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
   });
+
+  // Redirect authenticated users to their dashboard
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const { role } = session.user;
+      
+      if (role === 'ADMIN') {
+        router.replace('/admin');
+      } else if (role === 'MANAGER') {
+        router.replace('/manager');
+      } else if (role === 'STUDENT') {
+        router.replace('/student');
+      } else {
+        router.replace('/'); // Fallback
+      }
+    }
+  }, [session, status, router]);
 
   // Fetch universities on component mount
   useEffect(() => {
@@ -214,6 +237,23 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  // Show loading while checking session
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, don't render register form (will redirect)
+  if (status === 'authenticated') {
+    return null;
+  }
 
   if (isSubmitted) {
     return (
