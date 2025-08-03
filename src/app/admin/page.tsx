@@ -1,30 +1,36 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { AdminSidebar } from "@/components/navigation/admin-sidebar";
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
+
+import { AdminSidebar } from '@/components/navigation/admin-sidebar';
+import { Button } from '@/components/ui/button';
+
+import { authOptions } from '@/lib/auth';
 
 export default async function AdminDashboard() {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "ADMIN") {
-    redirect("/login");
+  if (!session || session.user.role !== 'ADMIN') {
+    redirect('/login');
   }
 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
       <AdminSidebar userName={session.user.name} />
-      
+
       {/* Main content */}
       <div className="flex-1 lg:pl-0">
         {/* Mobile header space */}
         <div className="lg:hidden h-16"></div>
-        
+
         <main className="p-4 lg:p-8 pb-20 lg:pb-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {session.user.name}</h1>
-            <p className="text-gray-600">Here&apos;s what&apos;s happening with your system today.</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {session.user.name}
+            </h1>
+            <p className="text-gray-600">
+              Here&apos;s what&apos;s happening with your system today.
+            </p>
           </div>
 
           {/* Quick Stats */}
@@ -40,7 +46,7 @@ export default async function AdminDashboard() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white border-2 border-gray-200 rounded-3xl p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -52,7 +58,7 @@ export default async function AdminDashboard() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white border-2 border-gray-200 rounded-3xl p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -64,7 +70,7 @@ export default async function AdminDashboard() {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-white border-2 border-gray-200 rounded-3xl p-6">
               <div className="flex items-center justify-between">
                 <div>

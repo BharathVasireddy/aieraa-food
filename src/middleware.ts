@@ -1,5 +1,5 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { withAuth } from 'next-auth/middleware';
+import { NextResponse } from 'next/server';
 
 export default withAuth(
   function middleware(req) {
@@ -8,36 +8,36 @@ export default withAuth(
 
     // Allow access to public routes
     if (
-      pathname === "/" ||
-      pathname === "/login" ||
-      pathname === "/register" ||
-      pathname.startsWith("/api/auth") ||
-      pathname.startsWith("/api/universities")
+      pathname === '/' ||
+      pathname === '/login' ||
+      pathname === '/register' ||
+      pathname.startsWith('/api/auth') ||
+      pathname.startsWith('/api/universities')
     ) {
       return NextResponse.next();
     }
 
     // Require authentication for protected routes
     if (!token) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.redirect(new URL('/login', req.url));
     }
 
     // Role-based access control
     const userRole = token.role as string;
 
     // Admin routes
-    if (pathname.startsWith("/admin") && userRole !== "ADMIN") {
-      return NextResponse.redirect(new URL("/login", req.url));
+    if (pathname.startsWith('/admin') && userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/login', req.url));
     }
 
     // Manager routes
-    if (pathname.startsWith("/manager") && userRole !== "MANAGER") {
-      return NextResponse.redirect(new URL("/login", req.url));
+    if (pathname.startsWith('/manager') && userRole !== 'MANAGER') {
+      return NextResponse.redirect(new URL('/login', req.url));
     }
 
     // Student routes
-    if (pathname.startsWith("/student") && userRole !== "STUDENT") {
-      return NextResponse.redirect(new URL("/login", req.url));
+    if (pathname.startsWith('/student') && userRole !== 'STUDENT') {
+      return NextResponse.redirect(new URL('/login', req.url));
     }
 
     return NextResponse.next();
@@ -46,14 +46,14 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const { pathname } = req.nextUrl;
-        
+
         // Allow public routes without authentication
         if (
-          pathname === "/" ||
-          pathname === "/login" ||
-          pathname === "/register" ||
-          pathname.startsWith("/api/auth") ||
-          pathname.startsWith("/api/universities")
+          pathname === '/' ||
+          pathname === '/login' ||
+          pathname === '/register' ||
+          pathname.startsWith('/api/auth') ||
+          pathname.startsWith('/api/universities')
         ) {
           return true;
         }
@@ -68,6 +68,6 @@ export default withAuth(
 export const config = {
   matcher: [
     // Match all routes except static files and api routes that don't need auth
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

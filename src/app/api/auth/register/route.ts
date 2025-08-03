@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import bcrypt from 'bcryptjs';
-import { prisma } from '@/lib/prisma';
+
 import { UserRole, UserStatus } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,34 +12,25 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!name || !email || !university || !password) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
     });
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
     }
 
     // Verify university exists
     const universityExists = await prisma.university.findUnique({
-      where: { id: university }
+      where: { id: university },
     });
 
     if (!universityExists) {
-      return NextResponse.json(
-        { error: 'Invalid university selected' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid university selected' }, { status: 400 });
     }
 
     // Hash password
@@ -58,29 +51,25 @@ export async function POST(request: NextRequest) {
       include: {
         university: {
           select: {
-            name: true
-          }
-        }
-      }
+            name: true,
+          },
+        },
+      },
     });
 
     // Return success response (don't include password)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _password, ...userWithoutPassword } = user;
-    
+
     return NextResponse.json(
       {
         message: 'Registration successful',
-        user: userWithoutPassword
+        user: userWithoutPassword,
       },
       { status: 201 }
     );
-
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,24 +1,21 @@
-"use client";
+'use client';
 
-import { signOut } from "next-auth/react";
-import { Button } from "@/components/ui/button";
+import { signOut } from 'next-auth/react';
+
+import { Button } from '@/components/ui/button';
 
 interface LogoutButtonProps {
-  variant?: "default" | "outline" | "ghost" | "secondary";
+  variant?: 'default' | 'outline' | 'ghost' | 'secondary';
   className?: string;
 }
 
-export function LogoutButton({ variant = "outline", className }: LogoutButtonProps) {
+export function LogoutButton({ variant = 'outline', className }: LogoutButtonProps) {
   const handleSignOut = () => {
-    signOut({ callbackUrl: "/" });
+    signOut({ callbackUrl: '/' });
   };
 
   return (
-    <Button 
-      variant={variant} 
-      onClick={handleSignOut}
-      className={className}
-    >
+    <Button variant={variant} onClick={handleSignOut} className={className}>
       Sign Out
     </Button>
   );

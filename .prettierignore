@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+out/
+dist/
+
+# Database
+prisma/migrations/
+*.db
+
+# Environment files
+.env*
+
+# Logs
+*.log
+
+# Other
+.DS_Store
+coverage/

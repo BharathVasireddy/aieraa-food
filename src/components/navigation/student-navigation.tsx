@@ -1,18 +1,14 @@
-"use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { LogoutButton } from "@/components/logout-button";
-import Image from "next/image";
-import { 
-  ChefHat,
-  ShoppingCart,
-  Clock,
-  User,
-  Heart,
-  Search,
-  Bell
-} from "lucide-react";
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+import { Bell, ChefHat, Clock, Heart, Search, ShoppingCart, User } from 'lucide-react';
+
+import { LogoutButton } from '@/components/logout-button';
+
+import { cn } from '@/lib/utils';
 
 interface NavItem {
   name: string;
@@ -21,17 +17,17 @@ interface NavItem {
 }
 
 const studentNavItems: NavItem[] = [
-  { name: "Menu", href: "/student", icon: ChefHat },
-  { name: "Cart", href: "/student/cart", icon: ShoppingCart },
-  { name: "Orders", href: "/student/orders", icon: Clock },
-  { name: "Profile", href: "/student/profile", icon: User },
+  { name: 'Menu', href: '/student', icon: ChefHat },
+  { name: 'Cart', href: '/student/cart', icon: ShoppingCart },
+  { name: 'Orders', href: '/student/orders', icon: Clock },
+  { name: 'Profile', href: '/student/profile', icon: User },
 ];
 
 const studentDesktopItems: NavItem[] = [
-  { name: "Browse Menu", href: "/student", icon: ChefHat },
-  { name: "Favorites", href: "/student/favorites", icon: Heart },
-  { name: "Order History", href: "/student/orders", icon: Clock },
-  { name: "Profile", href: "/student/profile", icon: User },
+  { name: 'Browse Menu', href: '/student', icon: ChefHat },
+  { name: 'Favorites', href: '/student/favorites', icon: Heart },
+  { name: 'Order History', href: '/student/orders', icon: Clock },
+  { name: 'Profile', href: '/student/profile', icon: User },
 ];
 
 interface StudentNavigationProps {
@@ -70,16 +66,14 @@ export function StudentNavigation({ userName, universityName }: StudentNavigatio
                 {studentDesktopItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
-                  
+
                   return (
                     <Link
                       key={item.name}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200",
-                        isActive 
-                          ? "bg-primary text-white" 
-                          : "text-gray-700 hover:bg-gray-50"
+                        'flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200',
+                        isActive ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-50'
                       )}
                     >
                       <Icon className="h-4 w-4" />
@@ -98,7 +92,10 @@ export function StudentNavigation({ userName, universityName }: StudentNavigatio
                   <Bell className="h-5 w-5 text-gray-600" />
                   <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                 </button>
-                <Link href="/student/cart" className="p-2 rounded-2xl hover:bg-gray-50 transition-colors relative">
+                <Link
+                  href="/student/cart"
+                  className="p-2 rounded-2xl hover:bg-gray-50 transition-colors relative"
+                >
                   <ShoppingCart className="h-5 w-5 text-gray-600" />
                   <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     2
@@ -134,7 +131,7 @@ export function StudentNavigation({ userName, universityName }: StudentNavigatio
               <p className="text-xs text-gray-600">{universityName}</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button className="p-2 rounded-2xl hover:bg-gray-50">
               <Search className="h-5 w-5 text-gray-600" />
@@ -153,21 +150,19 @@ export function StudentNavigation({ userName, universityName }: StudentNavigatio
           {studentNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-3 rounded-xl text-xs font-medium transition-all relative",
-                  isActive 
-                    ? "bg-primary text-white" 
-                    : "text-gray-600 hover:bg-gray-50"
+                  'flex flex-col items-center gap-1 p-3 rounded-xl text-xs font-medium transition-all relative',
+                  isActive ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'
                 )}
               >
                 <Icon className="h-5 w-5" />
                 <span>{item.name}</span>
-                {item.name === "Cart" && (
+                {item.name === 'Cart' && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                     2
                   </span>

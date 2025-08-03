@@ -1,7 +1,8 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import Image from "next/image";
+import Image from 'next/image';
+import Link from 'next/link';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Home() {
   return (
@@ -24,7 +25,12 @@ export default function Home() {
               </div>
             </div>
             <div className="flex gap-2 sm:gap-3">
-              <Button variant="outline" size="sm" asChild className="text-sm sm:text-base px-3 sm:px-6 h-10 sm:h-14">
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="text-sm sm:text-base px-3 sm:px-6 h-10 sm:h-14"
+              >
                 <Link href="/login">Sign In</Link>
               </Button>
               <Button size="sm" asChild className="text-sm sm:text-base px-3 sm:px-6 h-10 sm:h-14">
@@ -42,8 +48,8 @@ export default function Home() {
             Hostel Food Ordering Made Simple
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Internal food ordering system designed specifically for hostels. 
-            Easy ordering, efficient management, happy students.
+            Internal food ordering system designed specifically for hostels. Easy ordering,
+            efficient management, happy students.
           </p>
         </div>
 
@@ -86,9 +92,7 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle className="text-primary">For Admins</CardTitle>
-              <CardDescription>
-                Complete control over universities and managers
-              </CardDescription>
+              <CardDescription>Complete control over universities and managers</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm text-gray-600">

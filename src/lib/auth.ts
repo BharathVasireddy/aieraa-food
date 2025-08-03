@@ -1,33 +1,37 @@
-import { NextAuthOptions } from "next-auth"
-import CredentialsProvider from "next-auth/providers/credentials"
+import { NextAuthOptions } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+
 // Using API endpoints instead of direct database access
-import { UserRole } from "@prisma/client"
+import { UserRole } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      name: 'credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required")
+          throw new Error('Email and password are required');
         }
 
         try {
           // Use our login API for consistency
-          const response = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
+          const response = await fetch(
+            `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/login`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+              }),
+            }
+          );
 
           const data = await response.json();
 
@@ -49,33 +53,33 @@ export const authOptions: NextAuthOptions = {
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Authentication failed');
         }
-      }
-    })
+      },
+    }),
   ],
   session: {
-    strategy: "jwt"
+    strategy: 'jwt',
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role
-        token.status = user.status
-        token.universityId = user.universityId
-        token.university = user.university
+        token.role = user.role;
+        token.status = user.status;
+        token.universityId = user.universityId;
+        token.university = user.university;
       }
-      return token
+      return token;
     },
     async session({ session, token }) {
-      session.user.id = token.sub as string
-      session.user.role = token.role as UserRole
-      session.user.status = token.status as string
-      session.user.universityId = token.universityId as string
-      session.user.university = token.university as string
-      return session
-    }
+      session.user.id = token.sub as string;
+      session.user.role = token.role as UserRole;
+      session.user.status = token.status as string;
+      session.user.universityId = token.universityId as string;
+      session.user.university = token.university as string;
+      return session;
+    },
   },
   pages: {
-    signIn: "/login",
+    signIn: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
-}
+};

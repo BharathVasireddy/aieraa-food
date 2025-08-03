@@ -1,23 +1,25 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { redirect } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { StudentNavigation } from "@/components/navigation/student-navigation";
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
+
+import { StudentNavigation } from '@/components/navigation/student-navigation';
+import { Button } from '@/components/ui/button';
+
+import { authOptions } from '@/lib/auth';
 
 export default async function StudentDashboard() {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "STUDENT") {
-    redirect("/login");
+  if (!session || session.user.role !== 'STUDENT') {
+    redirect('/login');
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <StudentNavigation 
-        userName={session.user.name} 
-        universityName={session.user.university || "University"}
+      <StudentNavigation
+        userName={session.user.name}
+        universityName={session.user.university || 'University'}
       />
-      
+
       {/* Main content */}
       <main className="container mx-auto px-4 py-8 pb-24 lg:pb-8">
         {/* Header */}

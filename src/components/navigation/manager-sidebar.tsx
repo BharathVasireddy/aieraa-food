@@ -1,21 +1,25 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { LogoutButton } from "@/components/logout-button";
-import { 
-  Users, 
-  ChefHat, 
-  BarChart3, 
+import { useState } from 'react';
+
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+import {
+  BarChart3,
+  ChefHat,
+  FileText,
+  Home,
+  Menu,
   ShoppingBag,
   UserCheck,
-  Menu,
+  Users,
   X,
-  Home,
-  FileText
-} from "lucide-react";
+} from 'lucide-react';
+
+import { LogoutButton } from '@/components/logout-button';
+
+import { cn } from '@/lib/utils';
 
 interface SidebarItem {
   name: string;
@@ -24,13 +28,13 @@ interface SidebarItem {
 }
 
 const managerNavItems: SidebarItem[] = [
-  { name: "Dashboard", href: "/manager", icon: Home },
-  { name: "Menu", href: "/manager/menu", icon: ChefHat },
-  { name: "Student Approvals", href: "/manager/approvals", icon: UserCheck },
-  { name: "Orders", href: "/manager/orders", icon: ShoppingBag },
-  { name: "Students", href: "/manager/students", icon: Users },
-  { name: "Analytics", href: "/manager/analytics", icon: BarChart3 },
-  { name: "Reports", href: "/manager/reports", icon: FileText },
+  { name: 'Dashboard', href: '/manager', icon: Home },
+  { name: 'Menu', href: '/manager/menu', icon: ChefHat },
+  { name: 'Student Approvals', href: '/manager/approvals', icon: UserCheck },
+  { name: 'Orders', href: '/manager/orders', icon: ShoppingBag },
+  { name: 'Students', href: '/manager/students', icon: Users },
+  { name: 'Analytics', href: '/manager/analytics', icon: BarChart3 },
+  { name: 'Reports', href: '/manager/reports', icon: FileText },
 ];
 
 interface ManagerSidebarProps {
@@ -62,17 +66,19 @@ export function ManagerSidebar({ userName, universityName }: ManagerSidebarProps
 
       {/* Mobile overlay */}
       {isMobileMenuOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-40 w-64 bg-white border-r-2 border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
-        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <div
+        className={cn(
+          'fixed inset-y-0 left-0 z-40 w-64 bg-white border-r-2 border-gray-200 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0',
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="p-6 border-b border-gray-200">
@@ -93,17 +99,17 @@ export function ManagerSidebar({ userName, universityName }: ManagerSidebarProps
               {managerNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
-                
+
                 return (
                   <li key={item.name}>
                     <Link
                       href={item.href}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200",
-                        isActive 
-                          ? "bg-primary text-white shadow-sm" 
-                          : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        'flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                       )}
                     >
                       <Icon className="h-5 w-5" />
@@ -134,16 +140,14 @@ export function ManagerSidebar({ userName, universityName }: ManagerSidebarProps
           {managerNavItems.slice(0, 4).map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            
+
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 p-2 rounded-xl text-xs font-medium transition-all",
-                  isActive 
-                    ? "bg-primary text-white" 
-                    : "text-gray-600 hover:bg-gray-50"
+                  'flex flex-col items-center gap-1 p-2 rounded-xl text-xs font-medium transition-all',
+                  isActive ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-50'
                 )}
               >
                 <Icon className="h-5 w-5" />
