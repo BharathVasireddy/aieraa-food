@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 
 import { SessionProvider } from '@/components/providers/session-provider';
+import { ToastProvider } from '@/components/ui/toast';
 
 import './globals.css';
 
@@ -23,7 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${plusJakartaSans.variable} font-sans antialiased min-h-screen bg-white`}>
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          {children}
+          <ToastProvider />
+        </SessionProvider>
       </body>
     </html>
   );

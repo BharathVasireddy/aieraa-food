@@ -8,8 +8,10 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { ArrowLeft } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { showToast, errorHandlers, getErrorMessage } from '@/lib/error-handlers';
 
-import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
@@ -27,11 +29,22 @@ export default function LoginPage() {
     if (error) setError(''); // Clear error when user starts typing
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.email.trim()) {
+      showToast.error('Please enter your email address');
+      return;
+    }
+    
+    if (!formData.password) {
+      showToast.error('Please enter your password');
+      return;
+    }
 
-    if (!formData.email || !formData.password) {
-      setError('Please fill in all fields');
+    if (!formData.email.includes('@')) {
+      showToast.error('Please enter a valid email address');
       return;
     }
 
@@ -39,31 +52,63 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Show loading toast
+      const loadingToast = showToast.loading('Signing you in...');
+
       const result = await signIn('credentials', {
-        email: formData.email,
+        email: formData.email.trim(),
         password: formData.password,
         redirect: false,
       });
 
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
       if (result?.error) {
+        // Handle specific login errors
+        if (result.error.includes('pending approval')) {
+          errorHandlers.login({ 
+            error: result.error, 
+            status: 'pending_approval' 
+          });
+        } else if (result.error.includes('rejected')) {
+          errorHandlers.login({ 
+            error: result.error, 
+            status: 'rejected' 
+          });
+        } else if (result.error.includes('Invalid')) {
+          showToast.error('Invalid email or password. Please check your credentials.');
+        } else {
+          showToast.error('Unable to sign in. Please try again.');
+        }
         setError(result.error);
       } else if (result?.ok) {
-        // Get session to check user role and redirect accordingly
-        const session = await getSession();
-
-        if (session?.user?.role === 'ADMIN') {
-          router.push('/admin');
-        } else if (session?.user?.role === 'MANAGER') {
-          router.push('/manager');
-        } else if (session?.user?.role === 'STUDENT') {
-          router.push('/student');
-        } else {
-          router.push('/'); // Fallback
+        // Success!
+        showToast.success('Welcome back! Redirecting...');
+        
+        try {
+          // Get session to check user role and redirect accordingly
+          const session = await getSession();
+          
+          if (session?.user?.role === 'ADMIN') {
+            router.push('/admin');
+          } else if (session?.user?.role === 'MANAGER') {
+            router.push('/manager');
+          } else if (session?.user?.role === 'STUDENT') {
+            router.push('/student');
+          } else {
+            router.push('/'); // Fallback
+          }
+        } catch (sessionError) {
+          console.error('Session error:', sessionError);
+          showToast.error('Login successful, but unable to load your dashboard. Please refresh the page.');
+          router.push('/');
         }
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('An unexpected error occurred. Please try again.');
+      errorHandlers.network(error);
+      setError(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -136,9 +181,14 @@ export default function LoginPage() {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Signing In...' : 'Sign In'}
-                </Button>
+                              <LoadingButton 
+                type="submit" 
+                className="w-full" 
+                loading={isLoading}
+                loadingText="Signing In..."
+              >
+                Sign In
+              </LoadingButton>
               </form>
             </CardContent>
           </Card>

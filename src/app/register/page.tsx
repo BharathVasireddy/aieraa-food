@@ -6,8 +6,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { showToast, errorHandlers, handleApiResponse } from '@/lib/error-handlers';
 
 import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/ui/loading-button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
@@ -160,6 +163,9 @@ export default function RegisterPage() {
 
     setIsLoading(true);
 
+    // Show loading toast
+    const loadingToast = showToast.loading('Creating your account...');
+
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -176,20 +182,34 @@ export default function RegisterPage() {
       });
 
       const data = await response.json();
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
 
-      if (response.ok) {
-        setIsSubmitted(true);
-      } else {
-        // Handle specific errors
-        if (data.error === 'User with this email already exists') {
+      // Check for API errors
+      const apiError = handleApiResponse(response, data);
+      
+      if (apiError) {
+        // Handle specific registration errors
+        if (apiError.error.includes('email already exists')) {
           setErrors((prev) => ({ ...prev, email: 'An account with this email already exists' }));
+          showToast.error('This email is already registered. Try logging in instead.');
+        } else if (apiError.error.includes('university')) {
+          showToast.error('Please select a valid university from the list.');
         } else {
-          alert(data.error || 'Registration failed. Please try again.');
+          errorHandlers.registration(apiError);
         }
+        return;
       }
+
+      // Success!
+      showToast.success('Account created successfully! Please wait for approval.');
+      setIsSubmitted(true);
+      
     } catch (error) {
       console.error('Registration error:', error);
-      alert('Network error. Please check your connection and try again.');
+      toast.dismiss(loadingToast);
+      errorHandlers.network(error);
     } finally {
       setIsLoading(false);
     }
@@ -413,9 +433,14 @@ export default function RegisterPage() {
                     <p className="text-sm text-green-600 mt-1">✓ Passwords match</p>
                   )}
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Creating Account...' : 'Create Account'}
-                </Button>
+                                     <LoadingButton 
+                       type="submit" 
+                       className="w-full" 
+                       loading={isLoading}
+                       loadingText="Creating Account..."
+                     >
+                       Create Account
+                     </LoadingButton>
               </form>
             </CardContent>
           </Card>

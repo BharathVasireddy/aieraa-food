@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Minus } from 'lucide-react';
+import { showToast } from '@/lib/error-handlers';
+import { LoadingButton } from '@/components/ui/loading-button';
 
 interface MenuItemVariant {
   id: string;
@@ -38,13 +39,49 @@ export function MenuItemCard({
     variants.length > 0 ? variants[0].id : null
   );
   const [quantity, setQuantity] = useState(1);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const currentPrice = selectedVariant
     ? variants.find((v) => v.id === selectedVariant)?.price || basePrice
     : basePrice;
 
-  const handleAddToCart = () => {
-    onAddToCart(id, selectedVariant || undefined, quantity);
+  const handleAddToCart = async () => {
+    if (!isAvailable) {
+      showToast.error('This item is currently not available');
+      return;
+    }
+
+    if (selectedVariant) {
+      const variant = variants.find(v => v.id === selectedVariant);
+      if (variant && !variant.isAvailable) {
+        showToast.error('Selected variant is not available');
+        return;
+      }
+    }
+
+    setIsAddingToCart(true);
+    
+    try {
+      // Simulate API call delay for better UX
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      onAddToCart(id, selectedVariant || undefined, quantity);
+      
+      // Show success message
+      const variantName = selectedVariant 
+        ? variants.find(v => v.id === selectedVariant)?.name 
+        : '';
+      const itemName = variantName ? `${name} (${variantName})` : name;
+      const quantityText = quantity === 1 ? '' : ` x${quantity}`;
+      
+      showToast.success(`${itemName}${quantityText} added to cart!`);
+      
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      showToast.error('Unable to add item to cart. Please try again.');
+    } finally {
+      setIsAddingToCart(false);
+    }
   };
 
   const incrementQuantity = () => setQuantity(Math.min(quantity + 1, 10));
@@ -136,14 +173,16 @@ export function MenuItemCard({
           </div>
 
           {/* Add to Cart Button */}
-          <Button
+          <LoadingButton
             onClick={handleAddToCart}
             disabled={!isAvailable}
+            loading={isAddingToCart}
+            loadingText="Adding..."
             className="w-full"
             size="lg"
           >
             {isAvailable ? `Add to Cart • ₹${currentPrice * quantity}` : 'Sold Out'}
-          </Button>
+          </LoadingButton>
         </div>
       </CardContent>
     </Card>
