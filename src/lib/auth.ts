@@ -1,8 +1,9 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
 
-// Using API endpoints instead of direct database access
-import { UserRole } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { UserRole, UserStatus } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -18,38 +19,43 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Use our login API for consistency
-          const response = await fetch(
-            `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/login`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
+          // Find user by email
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+            include: {
+              university: {
+                select: {
+                  name: true,
+                },
               },
-              body: JSON.stringify({
-                email: credentials.email,
-                password: credentials.password,
-              }),
-            }
-          );
+            },
+          });
 
-          const data = await response.json();
-
-          if (!response.ok) {
-            throw new Error(data.error || 'Authentication failed');
+          if (!user) {
+            throw new Error('Invalid email or password');
           }
 
-          const user = data.user;
+          // Verify password
+          const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
 
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            status: user.status,
-            universityId: user.universityId || undefined,
-            university: user.university?.name || undefined,
-          };
+          if (!isPasswordValid) {
+            throw new Error('Invalid email or password');
+          }
+
+          // Check if user is approved (for students)
+          if (user.status === UserStatus.PENDING) {
+            throw new Error('Your account is pending approval from your university manager');
+          }
+
+          if (user.status === UserStatus.REJECTED) {
+            throw new Error('Your account has been rejected. Please contact your university manager');
+          }
+
+          // Return user data for NextAuth session (exclude password)
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { password: _password, ...userWithoutPassword } = user;
+
+          return userWithoutPassword;
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Authentication failed');
         }
