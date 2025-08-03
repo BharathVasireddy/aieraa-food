@@ -14,14 +14,17 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
+        console.log('🔐 Starting authentication for:', credentials?.email);
+        const startTime = Date.now();
+        
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password are required');
         }
 
         try {
-          // Find user by email
+          // Find user by email (optimized query)
           const user = await prisma.user.findUnique({
-            where: { email: credentials.email },
+            where: { email: credentials.email.toLowerCase().trim() },
             include: {
               university: {
                 select: {
@@ -30,13 +33,18 @@ export const authOptions: NextAuthOptions = {
               },
             },
           });
+          console.log(`📊 Database query took: ${Date.now() - startTime}ms`);
 
           if (!user) {
+            console.log('❌ User not found');
             throw new Error('Invalid email or password');
           }
 
+          console.log('✅ User found, verifying password...');
+          const bcryptStart = Date.now();
           // Verify password
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+          console.log(`🔒 Password verification took: ${Date.now() - bcryptStart}ms`);
 
           if (!isPasswordValid) {
             throw new Error('Invalid email or password');
@@ -52,6 +60,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Return user data for NextAuth session
+          console.log(`🎉 Authentication successful! Total time: ${Date.now() - startTime}ms`);
           return {
             id: user.id,
             email: user.email,
