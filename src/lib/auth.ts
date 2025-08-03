@@ -51,11 +51,16 @@ export const authOptions: NextAuthOptions = {
             throw new Error('Your account has been rejected. Please contact your university manager');
           }
 
-          // Return user data for NextAuth session (exclude password)
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { password: _password, ...userWithoutPassword } = user;
-
-          return userWithoutPassword;
+          // Return user data for NextAuth session
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            status: user.status,
+            universityId: user.universityId,
+            university: user.university?.name,
+          };
         } catch (error) {
           throw new Error(error instanceof Error ? error.message : 'Authentication failed');
         }
