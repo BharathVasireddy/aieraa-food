@@ -4,9 +4,24 @@ import { UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import { prisma } from '@/lib/prisma';
+import { loginRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimitResult = loginRateLimit(request);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: rateLimitResult.error },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': rateLimitResult.retryAfter?.toString() || '900'
+          }
+        }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body;
 

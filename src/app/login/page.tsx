@@ -43,13 +43,25 @@ export default function LoginPage() {
     }
   }, [session, status, router]);
 
-  // Show loading while checking session
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (status === 'loading') {
+        console.warn('Session loading timeout - forcing unauthenticated state');
+      }
+    }, 10000); // 10 second timeout
+
+    return () => clearTimeout(timeout);
+  }, [status]);
+
+  // Show loading while checking session (with timeout protection)
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-gray-600">Checking authentication...</p>
+          <p className="text-xs text-gray-400 mt-2">This shouldn&apos;t take long</p>
         </div>
       </div>
     );
@@ -65,7 +77,7 @@ export default function LoginPage() {
     if (error) setError(''); // Clear error when user starts typing
   };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -232,14 +244,25 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </div>
-                              <LoadingButton 
-                type="submit" 
-                className="w-full" 
-                loading={isLoading}
-                loadingText="Signing In..."
-              >
-                Sign In
-              </LoadingButton>
+
+                {/* Forgot Password Link */}
+                <div className="text-right">
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot your password?
+                  </Link>
+                </div>
+
+                <LoadingButton 
+                  type="submit" 
+                  className="w-full" 
+                  loading={isLoading}
+                  loadingText="Signing In..."
+                >
+                  Sign In
+                </LoadingButton>
               </form>
             </CardContent>
           </Card>
