@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
-
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/api-response';
 
 export async function GET() {
   try {
@@ -9,13 +8,14 @@ export async function GET() {
       orderBy: { name: 'asc' },
       select: {
         id: true,
+        code: true,
         name: true,
       },
     });
 
-    return NextResponse.json(universities);
+    return apiSuccess(universities);
   } catch (error) {
     console.error('Failed to fetch universities:', error);
-    return NextResponse.json({ error: 'Failed to fetch universities' }, { status: 500 });
+    return apiError('Failed to fetch universities', { status: 500 });
   }
 }

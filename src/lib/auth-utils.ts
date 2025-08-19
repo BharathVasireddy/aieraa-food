@@ -13,7 +13,7 @@ export async function getCurrentUser() {
 export async function requireAuth() {
   const user = await getCurrentUser();
   if (!user) {
-    redirect('/auth/signin');
+    redirect('/login');
   }
   return user;
 }
@@ -21,7 +21,7 @@ export async function requireAuth() {
 export async function requireRole(role: UserRole) {
   const user = await requireAuth();
   if (user.role !== role) {
-    redirect('/unauthorized');
+    redirect('/login');
   }
   return user;
 }
@@ -29,7 +29,7 @@ export async function requireRole(role: UserRole) {
 export async function requireRoles(roles: UserRole[]) {
   const user = await requireAuth();
   if (!roles.includes(user.role)) {
-    redirect('/unauthorized');
+    redirect('/login');
   }
   return user;
 }

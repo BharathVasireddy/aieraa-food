@@ -2,18 +2,25 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
 import { ManagerSidebar } from '@/components/navigation/manager-sidebar';
-import { Button } from '@/components/ui/button';
+import { EditMenuItemClient } from './edit-menu-item-client';
 
 import { authOptions } from '@/lib/auth';
 
-import { ManagerDashboardClient } from './manager-dashboard-client';
+interface EditMenuItemPageProps {
+  params: Promise<{
+    slug: string;
+  }>;
+}
 
-export default async function ManagerDashboard() {
+export default async function EditMenuItemPage({ params }: EditMenuItemPageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session || session.user.role !== 'MANAGER') {
     redirect('/login');
   }
+
+  // Await the params in Next.js 15
+  const { slug } = await params;
 
   return (
     <div className="min-h-screen bg-gray-50 lg:flex">
@@ -28,15 +35,7 @@ export default async function ManagerDashboard() {
         <div className="lg:hidden h-16"></div>
 
         <main className="p-4 lg:p-8 pb-20 lg:pb-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome back, {session.user.name}
-            </h1>
-            <p className="text-gray-600">Manage your university&apos;s food ordering system.</p>
-          </div>
-
-          <ManagerDashboardClient />
+          <EditMenuItemClient slug={slug} />
         </main>
       </div>
     </div>

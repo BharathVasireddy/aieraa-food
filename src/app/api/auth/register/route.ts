@@ -1,27 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
 import { UserRole, UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import { prisma } from '@/lib/prisma';
+import { apiError, apiSuccess } from '@/lib/api-response';
+import { registerSchema } from '@/lib/validation';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, phone, university, password } = body;
-
-    // Validate required fields
-    if (!name || !email || !university || !password) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const parsed = registerSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError('Invalid request', { status: 400, details: parsed.error.flatten().fieldErrors });
     }
+    const { name, email, phone, university, password } = parsed.data;
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
-      return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
+      return apiError('User with this email already exists', { status: 409 });
     }
 
     // Verify university exists
@@ -30,7 +32,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!universityExists) {
-      return NextResponse.json({ error: 'Invalid university selected' }, { status: 400 });
+      return apiError('Invalid university selected', { status: 400 });
     }
 
     // Hash password
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         phone: phone || null,
         password: hashedPassword,
         role: UserRole.STUDENT,
@@ -61,15 +63,12 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _password, ...userWithoutPassword } = user;
 
-    return NextResponse.json(
-      {
-        message: 'Registration successful',
-        user: userWithoutPassword,
-      },
-      { status: 201 }
+    return apiSuccess(
+      { user: userWithoutPassword },
+      { status: 201, message: 'Registration successful' }
     );
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError('Internal server error', { status: 500 });
   }
 }

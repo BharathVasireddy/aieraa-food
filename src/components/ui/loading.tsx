@@ -1,30 +1,40 @@
-import { cn } from '@/lib/utils';
-
 interface LoadingProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-export function Loading({ size = 'md', className }: LoadingProps) {
+export function Loading({ size = 'md', className = '' }: LoadingProps) {
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-6 h-6', 
+    lg: 'w-8 h-8'
+  };
+
   return (
-    <div
-      className={cn(
-        'animate-spin rounded-full border-2 border-gray-300 border-t-primary',
-        {
-          'h-4 w-4': size === 'sm',
-          'h-6 w-6': size === 'md',
-          'h-8 w-8': size === 'lg',
-        },
-        className
-      )}
-    />
+    <div className={`flex items-center justify-center ${className}`}>
+      <div className="flex space-x-1">
+        <div 
+          className={`${sizeClasses[size]} bg-primary rounded-full animate-pulse`}
+          style={{ animationDelay: '0ms', animationDuration: '1000ms' }}
+        ></div>
+        <div 
+          className={`${sizeClasses[size]} bg-primary rounded-full animate-pulse`}
+          style={{ animationDelay: '150ms', animationDuration: '1000ms' }}
+        ></div>
+        <div 
+          className={`${sizeClasses[size]} bg-primary rounded-full animate-pulse`}
+          style={{ animationDelay: '300ms', animationDuration: '1000ms' }}
+        ></div>
+      </div>
+    </div>
   );
 }
 
-export function LoadingPage() {
+export function PageLoading() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
       <Loading size="lg" />
+      <p className="text-sm text-gray-600 font-medium">Loading...</p>
     </div>
   );
 }

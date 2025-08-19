@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,6 +6,171 @@ datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                  String              @id @default(cuid())
+  email               String              @unique
+  password            String
+  name                String
+  phone               String?
+  role                UserRole
+  status              UserStatus          @default(PENDING)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  universityId        String?
+  resetTokenHash      String?
+  resetTokenExpiresAt DateTime?
+  cartItems           CartItem[]
+  orders              Order[]
+  managedUniversities UniversityManager[]
+  university          University?         @relation(fields: [universityId], references: [id])
+
+  @@map("users")
+}
+
+model University {
+  id          String              @id @default(cuid())
+  code        String?             @unique
+  name        String              @unique
+  location    String?
+  description String?
+  isActive    Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  menus       Menu[]
+  categories  Category[]
+  orders      Order[]
+  managers    UniversityManager[]
+  students    User[]
+
+  @@map("universities")
+}
+
+model UniversityManager {
+  id           String     @id @default(cuid())
+  universityId String
+  managerId    String
+  createdAt    DateTime   @default(now())
+  manager      User       @relation(fields: [managerId], references: [id], onDelete: Cascade)
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  @@unique([universityId, managerId])
+  @@map("university_managers")
+  @@index([managerId])
+}
+
+model Menu {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  isActive     Boolean    @default(true)
+  universityId String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  items        MenuItem[]
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  @@map("menus")
+}
+
+model Category {
+  id           String     @id @default(cuid())
+  name         String
+  description  String?
+  universityId String
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  @@unique([name, universityId])
+  @@map("categories")
+}
+
+model MenuItem {
+  id          String            @id @default(cuid())
+  name        String
+  slug        String
+  description String?
+  image       String?
+  category    String?
+  foodType    FoodType          @default(VEG)
+  isAvailable Boolean           @default(true)
+  menuId      String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  cartItems   CartItem[]
+  variants    MenuItemVariant[]
+  menu        Menu              @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  orderItems  OrderItem[]
+
+  @@unique([slug, menuId])
+  @@map("menu_items")
+}
+
+model MenuItemVariant {
+  id         String      @id @default(cuid())
+  name       String
+  price      Float
+  isDefault  Boolean     @default(false)
+  menuItemId String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  cartItems  CartItem[]
+  menuItem   MenuItem    @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  orderItems OrderItem[]
+
+  @@map("menu_item_variants")
+}
+
+model CartItem {
+  id         String          @id @default(cuid())
+  quantity   Int             @default(1)
+  userId     String
+  menuItemId String
+  variantId  String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  menuItem   MenuItem        @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variant    MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, menuItemId, variantId])
+  @@map("cart_items")
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  orderNumber  String      @unique
+  totalAmount  Float
+  status       OrderStatus @default(PENDING)
+  notes        String?
+  userId       String
+  universityId String
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  items        OrderItem[]
+  university   University  @relation(fields: [universityId], references: [id])
+  user         User        @relation(fields: [userId], references: [id])
+
+  @@map("orders")
+  @@index([universityId])
+}
+
+model OrderItem {
+  id         String          @id @default(cuid())
+  quantity   Int
+  price      Float
+  orderId    String
+  menuItemId String
+  variantId  String
+  createdAt  DateTime        @default(now())
+  menuItem   MenuItem        @relation(fields: [menuItemId], references: [id])
+  order      Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant    MenuItemVariant @relation(fields: [variantId], references: [id])
+
+  @@map("order_items")
 }
 
 enum UserRole {
@@ -26,181 +188,15 @@ enum UserStatus {
 
 enum OrderStatus {
   PENDING
-  CONFIRMED
+  APPROVED
   PREPARING
-  READY
+  READY_TO_COLLECT
   DELIVERED
   CANCELLED
 }
 
-// User model for Admin, Manager, and Student
-model User {
-  id          String     @id @default(cuid())
-  email       String     @unique
-  password    String
-  name        String
-  phone       String?
-  role        UserRole
-  status      UserStatus @default(PENDING)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Relations
-  universityId String?
-  university   University? @relation(fields: [universityId], references: [id])
-  
-  // Manager relations
-  managedUniversities UniversityManager[]
-  
-  // Student relations
-  orders       Order[]
-  cartItems    CartItem[]
-
-  @@map("users")
-}
-
-// University model
-model University {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  location    String?
-  description String?
-  isActive    Boolean    @default(true)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Relations
-  students    User[]
-  managers    UniversityManager[]
-  menus       Menu[]
-  orders      Order[]
-
-  @@map("universities")
-}
-
-// Junction table for University-Manager many-to-many relationship
-model UniversityManager {
-  id           String     @id @default(cuid())
-  universityId String
-  managerId    String
-  createdAt    DateTime   @default(now())
-
-  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  manager      User       @relation(fields: [managerId], references: [id], onDelete: Cascade)
-
-  @@unique([universityId, managerId])
-  @@map("university_managers")
-}
-
-// Menu model (each university can have multiple menus)
-model Menu {
-  id           String     @id @default(cuid())
-  name         String
-  description  String?
-  isActive     Boolean    @default(true)
-  universityId String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-
-  // Relations
-  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  items        MenuItem[]
-
-  @@map("menus")
-}
-
-// Menu Item model
-model MenuItem {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  image       String?
-  category    String?
-  isAvailable Boolean    @default(true)
-  menuId      String
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-
-  // Relations
-  menu        Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  variants    MenuItemVariant[]
-  orderItems  OrderItem[]
-  cartItems   CartItem[]
-
-  @@map("menu_items")
-}
-
-// Menu Item Variant model (for different quantities/sizes)
-model MenuItemVariant {
-  id         String     @id @default(cuid())
-  name       String     // e.g., "Small", "Medium", "Large", "Half", "Full"
-  price      Float
-  isDefault  Boolean    @default(false)
-  menuItemId String
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-
-  // Relations
-  menuItem   MenuItem   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  orderItems OrderItem[]
-  cartItems  CartItem[]
-
-  @@map("menu_item_variants")
-}
-
-// Cart Item model (temporary storage before order)
-model CartItem {
-  id               String          @id @default(cuid())
-  quantity         Int             @default(1)
-  userId           String
-  menuItemId       String
-  variantId        String
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
-
-  // Relations
-  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  menuItem         MenuItem        @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  variant          MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, menuItemId, variantId])
-  @@map("cart_items")
-}
-
-// Order model
-model Order {
-  id           String      @id @default(cuid())
-  orderNumber  String      @unique
-  totalAmount  Float
-  status       OrderStatus @default(PENDING)
-  notes        String?
-  userId       String
-  universityId String
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  // Relations
-  user         User        @relation(fields: [userId], references: [id])
-  university   University  @relation(fields: [universityId], references: [id])
-  items        OrderItem[]
-
-  @@map("orders")
-}
-
-// Order Item model
-model OrderItem {
-  id        String          @id @default(cuid())
-  quantity  Int
-  price     Float           // Price at the time of order
-  orderId   String
-  menuItemId String
-  variantId String
-  createdAt DateTime        @default(now())
-
-  // Relations
-  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItem  MenuItem        @relation(fields: [menuItemId], references: [id])
-  variant   MenuItemVariant @relation(fields: [variantId], references: [id])
-
-  @@map("order_items")
+enum FoodType {
+  VEG
+  NON_VEG
+  HALAL
 }

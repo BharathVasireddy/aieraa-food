@@ -11,6 +11,7 @@ export default withAuth(
       pathname === '/' ||
       pathname === '/login' ||
       pathname === '/register' ||
+      pathname === '/unauthorized' ||
       pathname.startsWith('/api/auth') ||
       pathname.startsWith('/api/universities')
     ) {
@@ -27,17 +28,17 @@ export default withAuth(
 
     // Admin routes
     if (pathname.startsWith('/admin') && userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/login', req.url));
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
 
     // Manager routes
     if (pathname.startsWith('/manager') && userRole !== 'MANAGER') {
-      return NextResponse.redirect(new URL('/login', req.url));
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
 
     // Student routes
     if (pathname.startsWith('/student') && userRole !== 'STUDENT') {
-      return NextResponse.redirect(new URL('/login', req.url));
+      return NextResponse.redirect(new URL('/unauthorized', req.url));
     }
 
     return NextResponse.next();

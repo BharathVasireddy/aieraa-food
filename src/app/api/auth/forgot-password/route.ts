@@ -1,23 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 
 import { prisma } from '@/lib/prisma';
 import { forgotPasswordRateLimit } from '@/lib/rate-limit';
+import { apiError, apiSuccess } from '@/lib/api-response';
 
 export async function POST(request: NextRequest) {
   try {
     // Apply rate limiting
-    const rateLimitResult = forgotPasswordRateLimit(request);
+    const rateLimitResult = await forgotPasswordRateLimit(request);
     if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { error: rateLimitResult.error },
-        { 
-          status: 429,
-          headers: {
-            'Retry-After': rateLimitResult.retryAfter?.toString() || '3600'
-          }
-        }
-      );
+      return apiError(rateLimitResult.error || 'Too many attempts', { 
+        status: 429,
+        headers: { 'Retry-After': rateLimitResult.retryAfter?.toString() || '3600' }
+      });
     }
 
     const body = await request.json();
@@ -25,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+      return apiError('Email is required', { status: 400 });
     }
 
     // Find user by email
@@ -36,30 +32,22 @@ export async function POST(request: NextRequest) {
     // Always return success for security (don't reveal if email exists)
     // This prevents email enumeration attacks
     if (!user) {
-      return NextResponse.json({ 
-        message: 'If an account with that email exists, we have sent a password reset link.' 
-      }, { status: 200 });
+      return apiSuccess({ message: 'If an account with that email exists, we have sent a password reset link.' }, { status: 200 });
     }
 
-    // Generate reset token
+    // Generate reset token and store hash
     const resetToken = crypto.randomBytes(32).toString('hex');
-    // const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+    const resetTokenExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Store reset token in database
-    // Note: You'll need to add these fields to your User model in schema.prisma
-    try {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          // These fields need to be added to the User model
-          // resetToken,
-          // resetTokenExpiry,
-        },
-      });
-    } catch (updateError) {
-      console.error('Error storing reset token:', updateError);
-      // For now, just log the error since the fields don't exist yet
-    }
+    // Store reset token hash in database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetTokenHash,
+        resetTokenExpiresAt,
+      },
+    });
 
     // TODO: Send email with reset link
     // For now, we'll just log it for development
@@ -71,12 +59,10 @@ export async function POST(request: NextRequest) {
     // Example using a service like SendGrid, Resend, or Nodemailer:
     // await sendPasswordResetEmail(user.email, resetToken);
 
-    return NextResponse.json({ 
-      message: 'If an account with that email exists, we have sent a password reset link.' 
-    }, { status: 200 });
+    return apiSuccess({ message: 'If an account with that email exists, we have sent a password reset link.' }, { status: 200 });
 
   } catch (error) {
     console.error('Forgot password error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return apiError('Internal server error', { status: 500 });
   }
 }

@@ -26,6 +26,7 @@ async function main() {
     where: { name: 'IIT Delhi' },
     update: {},
     create: {
+      code: 'IITD',
       name: 'IIT Delhi',
       location: 'New Delhi',
       description: 'Indian Institute of Technology Delhi',
@@ -37,6 +38,7 @@ async function main() {
     where: { name: 'IIT Bombay' },
     update: {},
     create: {
+      code: 'IITB',
       name: 'IIT Bombay',
       location: 'Mumbai',
       description: 'Indian Institute of Technology Bombay',
@@ -85,6 +87,7 @@ async function main() {
         create: [
           {
             name: 'Idli Sambar',
+            slug: 'idli-sambar',
             description: 'Steamed rice cakes with lentil curry',
             category: 'South Indian',
             isAvailable: true,
@@ -97,6 +100,7 @@ async function main() {
           },
           {
             name: 'Aloo Paratha',
+            slug: 'aloo-paratha',
             description: 'Stuffed potato flatbread',
             category: 'North Indian',
             isAvailable: true,
@@ -109,6 +113,7 @@ async function main() {
           },
           {
             name: 'Tea',
+            slug: 'tea',
             description: 'Indian masala tea',
             category: 'Beverages',
             isAvailable: true,

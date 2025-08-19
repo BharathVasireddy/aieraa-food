@@ -2,13 +2,11 @@ import { getServerSession } from 'next-auth';
 import { redirect } from 'next/navigation';
 
 import { ManagerSidebar } from '@/components/navigation/manager-sidebar';
-import { Button } from '@/components/ui/button';
+import { NewMenuItemClient } from './new-menu-item-client';
 
 import { authOptions } from '@/lib/auth';
 
-import { ManagerDashboardClient } from './manager-dashboard-client';
-
-export default async function ManagerDashboard() {
+export default async function NewMenuItemPage() {
   const session = await getServerSession(authOptions);
 
   if (!session || session.user.role !== 'MANAGER') {
@@ -28,15 +26,7 @@ export default async function ManagerDashboard() {
         <div className="lg:hidden h-16"></div>
 
         <main className="p-4 lg:p-8 pb-20 lg:pb-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome back, {session.user.name}
-            </h1>
-            <p className="text-gray-600">Manage your university&apos;s food ordering system.</p>
-          </div>
-
-          <ManagerDashboardClient />
+          <NewMenuItemClient />
         </main>
       </div>
     </div>
