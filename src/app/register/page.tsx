@@ -72,7 +72,14 @@ export default function RegisterPage() {
       try {
         const response = await fetch('/api/universities');
         const data = await response.json();
-        setUniversities(data);
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray((data as { data?: University[] })?.data)
+            ? (data as { data: University[] }).data
+            : Array.isArray((data as { universities?: University[] })?.universities)
+              ? (data as { universities: University[] }).universities
+              : [];
+        setUniversities(list);
       } catch (error) {
         console.error('Failed to fetch universities:', error);
       }
