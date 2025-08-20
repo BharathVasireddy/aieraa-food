@@ -36,6 +36,9 @@ model University {
   location    String?
   description String?
   isActive    Boolean             @default(true)
+  timezone    String              @default("Asia/Ho_Chi_Minh")
+  orderCutoffTime String          @default("20:00") // HH:mm in university timezone
+  maxAdvanceDays Int              @default(7)
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   menus       Menu[]
@@ -104,9 +107,24 @@ model MenuItem {
   variants    MenuItemVariant[]
   menu        Menu              @relation(fields: [menuId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
+  availabilities MenuItemAvailability[]
 
   @@unique([slug, menuId])
   @@map("menu_items")
+}
+
+model MenuItemAvailability {
+  id         String   @id @default(cuid())
+  menuItemId String
+  date       DateTime // Use UTC midnight; treat as date-only
+  isAvailable Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@unique([menuItemId, date])
+  @@index([date])
+  @@map("menu_item_availability")
 }
 
 model MenuItemVariant {
@@ -130,13 +148,14 @@ model CartItem {
   userId     String
   menuItemId String
   variantId  String
+  scheduledForDate DateTime
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
   menuItem   MenuItem        @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
   user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   variant    MenuItemVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, menuItemId, variantId])
+  @@unique([userId, menuItemId, variantId, scheduledForDate])
   @@map("cart_items")
 }
 
@@ -148,6 +167,7 @@ model Order {
   notes        String?
   userId       String
   universityId String
+  scheduledForDate DateTime
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   items        OrderItem[]
@@ -156,6 +176,7 @@ model Order {
 
   @@map("orders")
   @@index([universityId])
+  @@index([scheduledForDate])
 }
 
 model OrderItem {

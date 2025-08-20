@@ -31,4 +31,24 @@ export const updateOrderStatusSchema = z.object({
 	status: z.enum(['PENDING', 'APPROVED', 'PREPARING', 'READY_TO_COLLECT', 'DELIVERED', 'CANCELLED'])
 });
 
+// Student: cart & checkout
+export const cartAddSchema = z.object({
+	menuItemId: z.string().min(1),
+	variantId: z.string().min(1),
+	quantity: z.number().int().min(1).max(10),
+	scheduledForDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), // yyyy-MM-dd (UTC date key)
+});
+
+export const cartUpdateSchema = z.object({
+	menuItemId: z.string().min(1),
+	variantId: z.string().min(1),
+	quantity: z.number().int().min(0).max(10),
+	scheduledForDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+export const checkoutSchema = z.object({
+	scheduledForDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+
 

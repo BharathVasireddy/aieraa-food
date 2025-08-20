@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { StudentNavigation } from '@/components/navigation/student-navigation';
 import { Button } from '@/components/ui/button';
 import { MenuCategories } from '@/components/student/menu-categories';
 import { MenuSearch } from '@/components/student/menu-search';
 import { MenuItemCard } from '@/components/student/menu-item-card';
-import { sampleMenuItems } from '@/lib/sample-menu-data';
 import { ChefHat, Search } from 'lucide-react';
 
 interface StudentMenuClientProps {
@@ -18,46 +17,112 @@ interface StudentMenuClientProps {
 export function StudentMenuClient({ userName, universityName }: StudentMenuClientProps) {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [cartItems, setCartItems] = useState<Array<{ itemId: string; variantId?: string; quantity: number }>>([]);
+  const [scheduledDate, setScheduledDate] = useState<string>(''); // yyyy-MM-dd
+  interface StudentSettings { timezone: string; orderCutoffTime: string; maxAdvanceDays: number; name: string }
+  interface StudentVariant { id: string; name: string; price: number; isDefault?: boolean }
+  interface StudentMenuItem { id: string; name: string; description?: string; image?: string; category?: string; foodType?: string; variants?: StudentVariant[] }
+  const [menuItems, setMenuItems] = useState<StudentMenuItem[]>([]);
+  const [settings, setSettings] = useState<StudentSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [cartCount, setCartCount] = useState(0);
 
-  // Filter menu items based on category and search
-  const filteredItems = sampleMenuItems.filter((item) => {
-    const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  useEffect(() => {
+    const today = new Date();
+    const yyyy = today.getUTCFullYear();
+    const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(today.getUTCDate()).padStart(2, '0');
+    setScheduledDate(`${yyyy}-${mm}-${dd}`);
+  }, []);
 
-  const handleAddToCart = (itemId: string, variantId?: string, quantity: number = 1) => {
-    setCartItems((prev) => {
-      const existingItem = prev.find((item) => item.itemId === itemId && item.variantId === variantId);
-      if (existingItem) {
-        return prev.map((item) =>
-          item.itemId === itemId && item.variantId === variantId
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+  useEffect(() => {
+    async function load() {
+      if (!scheduledDate) return;
+      setLoading(true);
+      try {
+        const [settingsRes, menuRes, cartRes] = await Promise.all([
+          fetch('/api/student/settings'),
+          fetch(`/api/student/menu?date=${scheduledDate}`),
+          fetch('/api/student/cart'),
+        ]);
+        if (settingsRes.ok) {
+          const { data } = await settingsRes.json();
+          setSettings(data.settings);
+        }
+        if (menuRes.ok) {
+          const { data } = await menuRes.json();
+          setMenuItems((data.items || []) as StudentMenuItem[]);
+        }
+        if (cartRes.ok) {
+          const { data } = await cartRes.json();
+          const count = (data.items || []).reduce((sum: number, it: { quantity: number }) => sum + it.quantity, 0);
+          setCartCount(count);
+        }
+      } finally {
+        setLoading(false);
       }
-      return [...prev, { itemId, variantId, quantity }];
+    }
+    load();
+  }, [scheduledDate]);
+
+  const filteredItems = useMemo(() => {
+    return (menuItems || []).filter((item: StudentMenuItem) => {
+      const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
+      const matchesSearch =
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
     });
+  }, [menuItems, selectedCategory, searchQuery]);
 
-    // Show a toast or notification here in a real app
-    console.log(`Added ${quantity} item(s) to cart`);
+  const handleAddToCart = async (itemId: string, variantId?: string, quantity: number = 1) => {
+    if (!scheduledDate) return;
+    await fetch('/api/student/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ menuItemId: itemId, variantId, quantity, scheduledForDate: scheduledDate })
+    });
+    // refresh count
+    const cartRes = await fetch('/api/student/cart');
+    if (cartRes.ok) {
+      const { data } = await cartRes.json();
+      const count = (data.items || []).reduce((sum: number, it: { quantity: number }) => sum + it.quantity, 0);
+      setCartCount(count);
+    }
   };
-
-  const cartItemCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <StudentNavigation userName={userName} universityName={universityName} />
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-8 pb-24 lg:pb-8">
+      <main className="container mx-auto px-4 py-6 pb-24 lg:pb-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Today&apos;s Menu</h1>
-          <p className="text-gray-600">Order your favorite food from {universityName}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Menu</h1>
+          <p className="text-gray-600 text-sm">Order from {universityName}</p>
+        </div>
+
+        {/* Date selector (mobile-first pills) */}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-1 mb-4">
+          {Array.from({ length: Math.min(settings?.maxAdvanceDays || 7, 7) }).map((_, idx) => {
+            const d = new Date();
+            d.setUTCDate(d.getUTCDate() + idx);
+            const yyyy = d.getUTCFullYear();
+            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+            const dd = String(d.getUTCDate()).padStart(2, '0');
+            const key = `${yyyy}-${mm}-${dd}`;
+            const label = idx === 0 ? 'Today' : idx === 1 ? 'Tomorrow' : key.slice(5);
+            const active = scheduledDate === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setScheduledDate(key)}
+                className={`px-3 py-2 rounded-full text-sm whitespace-nowrap ${active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-900'}`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Today's Special */}
@@ -94,26 +159,28 @@ export function StudentMenuClient({ userName, universityName }: StudentMenuClien
             </h3>
             <p className="text-sm text-gray-600">{filteredItems.length} items available</p>
           </div>
-          {cartItemCount > 0 && (
+          {cartCount > 0 && (
             <Button variant="outline" className="relative">
-              View Cart ({cartItemCount})
+              View Cart ({cartCount})
             </Button>
           )}
         </div>
 
         {/* Menu Items Grid */}
-        {filteredItems.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-12 text-gray-500">Loading...</div>
+        ) : filteredItems.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredItems.map((item) => (
               <MenuItemCard
                 key={item.id}
                 id={item.id}
                 name={item.name}
-                description={item.description}
-                basePrice={item.basePrice}
-                category={item.category}
-                isAvailable={item.isAvailable}
-                variants={item.variants}
+                description={item.description || ''}
+                basePrice={item.variants?.find((v:StudentVariant)=>v.isDefault)?.price || item.variants?.[0]?.price || 0}
+                category={item.category || ''}
+                isAvailable={true}
+                variants={item.variants?.map((v:StudentVariant)=>({ id: v.id, name: v.name, price: v.price, isAvailable: true }))}
                 onAddToCart={handleAddToCart}
               />
             ))}
