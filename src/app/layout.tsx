@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from 'next/font/google';
 
 import { SessionProvider } from '@/components/providers/session-provider';
 import { ToastProvider } from '@/components/ui/toast';
+import { StudentOrderingProvider } from '@/components/student/student-ordering-provider';
 
 import './globals.css';
 
@@ -25,8 +26,10 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${plusJakartaSans.variable} font-sans antialiased min-h-screen bg-white`}>
         <SessionProvider>
-          {children}
-          <ToastProvider />
+          <StudentOrderingProvider>
+            {children}
+            <ToastProvider />
+          </StudentOrderingProvider>
         </SessionProvider>
       </body>
     </html>

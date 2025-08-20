@@ -8,6 +8,7 @@ import { MenuCategories } from '@/components/student/menu-categories';
 import { MenuSearch } from '@/components/student/menu-search';
 import { MenuItemCard } from '@/components/student/menu-item-card';
 import { ChefHat, Search } from 'lucide-react';
+import { useStudentOrdering } from '@/components/student/student-ordering-provider';
 
 interface StudentMenuClientProps {
   userName: string;
@@ -15,39 +16,26 @@ interface StudentMenuClientProps {
 }
 
 export function StudentMenuClient({ userName, universityName }: StudentMenuClientProps) {
+  const { selectedDate: scheduledDate, vegOnly, sort } = useStudentOrdering();
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [scheduledDate, setScheduledDate] = useState<string>(''); // yyyy-MM-dd
-  interface StudentSettings { timezone: string; orderCutoffTime: string; maxAdvanceDays: number; name: string }
   interface StudentVariant { id: string; name: string; price: number; isDefault?: boolean }
   interface StudentMenuItem { id: string; name: string; description?: string; image?: string; category?: string; foodType?: string; variants?: StudentVariant[] }
   const [menuItems, setMenuItems] = useState<StudentMenuItem[]>([]);
-  const [settings, setSettings] = useState<StudentSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
 
-  useEffect(() => {
-    const today = new Date();
-    const yyyy = today.getUTCFullYear();
-    const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
-    const dd = String(today.getUTCDate()).padStart(2, '0');
-    setScheduledDate(`${yyyy}-${mm}-${dd}`);
-  }, []);
+  // scheduledDate comes from provider
 
   useEffect(() => {
     async function load() {
       if (!scheduledDate) return;
       setLoading(true);
       try {
-        const [settingsRes, menuRes, cartRes] = await Promise.all([
-          fetch('/api/student/settings'),
+        const [menuRes, cartRes] = await Promise.all([
           fetch(`/api/student/menu?date=${scheduledDate}`),
           fetch('/api/student/cart'),
         ]);
-        if (settingsRes.ok) {
-          const { data } = await settingsRes.json();
-          setSettings(data.settings);
-        }
         if (menuRes.ok) {
           const { data } = await menuRes.json();
           setMenuItems((data.items || []) as StudentMenuItem[]);
@@ -65,14 +53,31 @@ export function StudentMenuClient({ userName, universityName }: StudentMenuClien
   }, [scheduledDate]);
 
   const filteredItems = useMemo(() => {
-    return (menuItems || []).filter((item: StudentMenuItem) => {
+    let list = (menuItems || []).filter((item: StudentMenuItem) => {
       const matchesCategory = selectedCategory === 'ALL' || item.category === selectedCategory;
       const matchesSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (item.description || '').toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+      const matchesVeg = !vegOnly || (item.foodType === 'VEG');
+      return matchesCategory && matchesSearch && matchesVeg;
     });
-  }, [menuItems, selectedCategory, searchQuery]);
+    const extractPrice = (item: StudentMenuItem): number => {
+      const price = item.variants?.[0]?.price ?? 0;
+      return typeof price === 'number' ? price : 0;
+    };
+    if (sort === 'price_low') {
+      list = [...list].sort((a: StudentMenuItem, b: StudentMenuItem) => extractPrice(a) - extractPrice(b));
+    } else if (sort === 'price_high') {
+      list = [...list].sort((a: StudentMenuItem, b: StudentMenuItem) => extractPrice(b) - extractPrice(a));
+    }
+    return list;
+  }, [menuItems, selectedCategory, searchQuery, vegOnly, sort]);
+
+  function FilterChip({ label, active }: { label: string; active: boolean }) {
+    return (
+      <span className={`px-3 py-2 rounded-full ${active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-800'}`}>{label}</span>
+    );
+  }
 
   const handleAddToCart = async (itemId: string, variantId?: string, quantity: number = 1) => {
     if (!scheduledDate) return;
@@ -97,36 +102,15 @@ export function StudentMenuClient({ userName, universityName }: StudentMenuClien
       {/* Main content */}
       <main className="container mx-auto px-4 py-6 pb-24 lg:pb-6">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Menu</h1>
           <p className="text-gray-600 text-sm">Order from {universityName}</p>
         </div>
 
-        {/* Date selector (mobile-first pills) */}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 -mx-1 mb-4">
-          {Array.from({ length: Math.min(settings?.maxAdvanceDays || 7, 7) }).map((_, idx) => {
-            const d = new Date();
-            d.setUTCDate(d.getUTCDate() + idx);
-            const yyyy = d.getUTCFullYear();
-            const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
-            const dd = String(d.getUTCDate()).padStart(2, '0');
-            const key = `${yyyy}-${mm}-${dd}`;
-            const label = idx === 0 ? 'Today' : idx === 1 ? 'Tomorrow' : key.slice(5);
-            const active = scheduledDate === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setScheduledDate(key)}
-                className={`px-3 py-2 rounded-full text-sm whitespace-nowrap ${active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-900'}`}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        {/* Date selector moved to header */}
 
-        {/* Today's Special */}
-        <div className="bg-primary text-white rounded-3xl p-6 mb-8">
+        {/* Banners/Offers */}
+        <div className="bg-primary text-white rounded-3xl p-6 mb-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-bold mb-2">Today&apos;s Special</h2>
@@ -143,6 +127,15 @@ export function StudentMenuClient({ userName, universityName }: StudentMenuClien
 
         {/* Search */}
         <MenuSearch onSearch={setSearchQuery} />
+
+        {/* Filter bar */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-4 text-xs">
+          <span className="px-3 py-2 rounded-full bg-gray-100">Sort</span>
+          <FilterChip label="Relevance" active={sort==='relevance'} />
+          <FilterChip label="Price Low" active={sort==='price_low'} />
+          <FilterChip label="Price High" active={sort==='price_high'} />
+          {vegOnly && <span className="px-3 py-2 rounded-full bg-green-100 text-green-700">Veg Only</span>}
+        </div>
 
         {/* Categories */}
         <MenuCategories selectedCategory={selectedCategory} onCategoryChange={setSelectedCategory} />
@@ -170,7 +163,7 @@ export function StudentMenuClient({ userName, universityName }: StudentMenuClien
         {loading ? (
           <div className="text-center py-12 text-gray-500">Loading...</div>
         ) : filteredItems.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredItems.map((item) => (
               <MenuItemCard
                 key={item.id}

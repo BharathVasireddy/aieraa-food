@@ -4,7 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Bell, ChefHat, Clock, Heart, Search, ShoppingCart, User } from 'lucide-react';
+import { ChefHat, Clock, Heart, ShoppingCart, User } from 'lucide-react';
+import { useStudentOrdering } from '@/components/student/student-ordering-provider';
 
 import { LogoutButton } from '@/components/logout-button';
 
@@ -37,6 +38,7 @@ interface StudentNavigationProps {
 
 export function StudentNavigation({ userName, universityName }: StudentNavigationProps) {
   const pathname = usePathname();
+  const { selectedDate, setSelectedDate, vegOnly, setVegOnly, countdownLabel, settings } = useStudentOrdering();
 
   return (
     <>
@@ -83,15 +85,15 @@ export function StudentNavigation({ userName, universityName }: StudentNavigatio
                 })}
               </nav>
 
-              {/* User Actions */}
+              {/* User Actions + Filters */}
               <div className="flex items-center gap-3">
-                <button className="p-2 rounded-2xl hover:bg-gray-50 transition-colors">
-                  <Search className="h-5 w-5 text-gray-600" />
-                </button>
-                <button className="p-2 rounded-2xl hover:bg-gray-50 transition-colors relative">
-                  <Bell className="h-5 w-5 text-gray-600" />
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
+                <div className="hidden md:flex items-center gap-3">
+                  <DatePills selectedDate={selectedDate} onSelect={setSelectedDate} maxDays={Math.min(settings?.maxAdvanceDays || 7, 7)} />
+                  <label className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" className="accent-green-600" checked={vegOnly} onChange={(e)=>setVegOnly(e.target.checked)} />
+                    Veg only
+                  </label>
+                </div>
                 <Link
                   href="/student/cart"
                   className="p-2 rounded-2xl hover:bg-gray-50 transition-colors relative"
@@ -132,15 +134,19 @@ export function StudentNavigation({ userName, universityName }: StudentNavigatio
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-2xl hover:bg-gray-50">
-              <Search className="h-5 w-5 text-gray-600" />
-            </button>
-            <button className="p-2 rounded-2xl hover:bg-gray-50 relative">
-              <Bell className="h-5 w-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs">
+              <input type="checkbox" className="accent-green-600" checked={vegOnly} onChange={(e)=>setVegOnly(e.target.checked)} />
+              Veg
+            </label>
+            <Link href="/student/cart" className="p-2 rounded-2xl hover:bg-gray-50 relative">
+              <ShoppingCart className="h-5 w-5 text-gray-600" />
+            </Link>
           </div>
+        </div>
+        <div className="px-4 pb-3">
+          <DatePills selectedDate={selectedDate} onSelect={setSelectedDate} maxDays={Math.min(settings?.maxAdvanceDays || 7, 7)} />
+          <div className="mt-2 text-[11px] text-gray-600">{countdownLabel}</div>
         </div>
       </div>
 
@@ -175,5 +181,26 @@ export function StudentNavigation({ userName, universityName }: StudentNavigatio
         <div className="h-safe-area-inset-bottom bg-white"></div>
       </div>
     </>
+  );
+}
+
+function DatePills({ selectedDate, onSelect, maxDays }: { selectedDate: string; onSelect: (s: string)=>void; maxDays: number }) {
+  const days = Array.from({ length: maxDays }).map((_, idx) => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() + idx);
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const key = `${yyyy}-${mm}-${dd}`;
+    const label = idx === 0 ? 'Today' : idx === 1 ? 'Tomorrow' : key.slice(5);
+    const active = selectedDate === key;
+    return { key, label, active };
+  });
+  return (
+    <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 -mx-1">
+      {days.map((d) => (
+        <button key={d.key} onClick={() => onSelect(d.key)} className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap ${d.active ? 'bg-primary text-white' : 'bg-gray-100 text-gray-900'}`}>{d.label}</button>
+      ))}
+    </div>
   );
 }
