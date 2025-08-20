@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma';
 import { apiError, apiSuccess } from '@/lib/api-response';
 import { checkoutSchema } from '@/lib/validation';
 import { isPastCutoffForDate, isWithinAdvanceWindow, toUtcDateOnly } from '@/lib/time';
+import { sendNewOrderEmail } from '@/lib/email';
 
 function generateOrderNumber(): string {
 	const now = new Date();
@@ -89,6 +90,26 @@ export async function POST(request: NextRequest) {
 			await tx.cartItem.deleteMany({ where: { userId: session.user.id, scheduledForDate: scheduledDateUtc } });
 			return created;
 		});
+
+    try {
+      const managers = await prisma.universityManager.findMany({
+        where: { universityId: user.universityId },
+        select: { manager: { select: { email: true, name: true } } }
+      });
+      const managerEmails = managers.map(m => m.manager.email).filter(Boolean) as string[];
+      if (managerEmails.length > 0) {
+        await sendNewOrderEmail(managerEmails, {
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+          scheduledForDate: checkoutSchema.parse(body).scheduledForDate,
+          universityName: university.name,
+          studentName: session.user.name,
+          items: order.items.map(it => ({ quantity: it.quantity, name: it.menuItem.name, variant: it.variant.name, price: it.variant.price }))
+        });
+      }
+    } catch (mailError) {
+      console.error('Failed to send manager order notification:', mailError);
+    }
 
 		return apiSuccess({ order }, { status: 201, message: 'Order placed' });
 	} catch (e) {
