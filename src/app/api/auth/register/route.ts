@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-import { UserRole, UserStatus } from '@prisma/client';
+import { Prisma, UserRole, UserStatus } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import { prisma } from '@/lib/prisma';
@@ -68,7 +68,18 @@ export async function POST(request: NextRequest) {
       { status: 201, message: 'Registration successful' }
     );
   } catch (error) {
+    // Provide more actionable errors where possible
     console.error('Registration error:', error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        // Unique constraint failed
+        return apiError('User with this email already exists', { status: 409 });
+      }
+      if (error.code === 'P2003') {
+        // Foreign key constraint failed (likely invalid university)
+        return apiError('Invalid university selected', { status: 400 });
+      }
+    }
     return apiError('Internal server error', { status: 500 });
   }
 }
