@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { forgotPasswordRateLimit } from '@/lib/rate-limit';
 import { apiError, apiSuccess } from '@/lib/api-response';
+import { sendPasswordResetEmail } from '@/lib/email';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,15 +50,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Send email with reset link
-    // For now, we'll just log it for development
-    console.log(`Password reset requested for ${email}`);
-    console.log(`Reset token: ${resetToken}`);
-    console.log(`Reset link would be: ${process.env.NEXTAUTH_URL}/reset-password?token=${resetToken}`);
-
-    // TODO: Implement email sending
-    // Example using a service like SendGrid, Resend, or Nodemailer:
-    // await sendPasswordResetEmail(user.email, resetToken);
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const resetLink = `${baseUrl}/reset-password?token=${resetToken}`;
+    try {
+      await sendPasswordResetEmail(user.email, resetLink);
+    } catch (mailError) {
+      console.error('Email send failed (Brevo):', mailError);
+      // still return success to avoid disclosure
+    }
 
     return apiSuccess({ message: 'If an account with that email exists, we have sent a password reset link.' }, { status: 200 });
 
