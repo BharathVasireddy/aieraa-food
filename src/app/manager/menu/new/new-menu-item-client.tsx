@@ -42,6 +42,9 @@ export function NewMenuItemClient() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [hasVariants, setHasVariants] = useState(false);
+  const [basePrice, setBasePrice] = useState<number>(0);
 
   const [newItem, setNewItem] = useState<NewMenuItem>({
     name: '',
@@ -100,20 +103,41 @@ export function NewMenuItemClient() {
   };
 
   const handleSubmit = async () => {
-    if (!selectedMenuId || !newItem.name || newItem.variants.length === 0) return;
+    if (!selectedMenuId || !newItem.name) return;
 
     setSubmitting(true);
     try {
+      const variantsPayload = hasVariants
+        ? newItem.variants
+        : [{ name: 'Regular', price: Number(basePrice) || 0, isDefault: true }];
+
       const response = await fetch('/api/manager/menu/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           menuId: selectedMenuId,
-          ...newItem
+          ...newItem,
+          variants: variantsPayload
         })
       });
 
       if (response.ok) {
+        const json = await response.json();
+        const createdId: string | undefined = json?.data?.menuItem?.id;
+        if (createdId) {
+          const today = new Date();
+          const yyyy = today.getUTCFullYear();
+          const mm = String(today.getUTCMonth() + 1).padStart(2, '0');
+          const dd = String(today.getUTCDate()).padStart(2, '0');
+          const date = `${yyyy}-${mm}-${dd}`;
+          try {
+            await fetch('/api/manager/menu/availability', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ menuItemId: createdId, date, isAvailable: newItem.isAvailable })
+            });
+          } catch (e) {}
+        }
         router.push('/manager/menu');
       }
     } catch (error) {
@@ -182,7 +206,7 @@ export function NewMenuItemClient() {
           <LoadingButton
             onClick={handleSubmit}
             loading={submitting}
-            disabled={!newItem.name || newItem.variants.length === 0}
+            disabled={!newItem.name || (!hasVariants && (basePrice === null || basePrice === undefined))}
             className="flex items-center gap-2"
           >
             <Save className="h-4 w-4" />
@@ -252,15 +276,42 @@ export function NewMenuItemClient() {
                 <div className="text-center">
                   <ImagePlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <div className="space-y-2">
-                    <Input
-                      value={newItem.image}
-                      onChange={(e) => setNewItem(prev => ({ ...prev, image: e.target.value }))}
-                      placeholder="Enter image URL"
-                      className="max-w-md mx-auto"
-                    />
-                    <p className="text-sm text-gray-500">
-                      Add an image URL or upload files (drag and drop functionality can be added)
-                    </p>
+                    <div className="grid gap-3 max-w-md mx-auto">
+                      <Input
+                        value={newItem.image}
+                        onChange={(e) => setNewItem(prev => ({ ...prev, image: e.target.value }))}
+                        placeholder="Enter image URL"
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          id="file-input"
+                          type="file"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setUploading(true);
+                            try {
+                              const form = new FormData();
+                              form.append('file', file);
+                              const res = await fetch('/api/upload', { method: 'POST', body: form });
+                              if (res.ok) {
+                                const data = await res.json();
+                                if (data?.url) setNewItem(prev => ({ ...prev, image: data.url as string }));
+                              }
+                            } catch (err) {
+                              console.error('Upload failed', err);
+                            } finally {
+                              setUploading(false);
+                              e.currentTarget.value = '';
+                            }
+                          }}
+                          className="block w-full text-sm text-gray-600"
+                        />
+                        <span className="text-xs text-gray-500">{uploading ? 'Uploading...' : 'or paste URL above'}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500">Max ~5MB. In production, configure cloud storage.</p>
                   </div>
                 </div>
               )}
@@ -271,80 +322,76 @@ export function NewMenuItemClient() {
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold">Pricing & Variants</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddVariant}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add variant
-              </Button>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={hasVariants}
+                  onChange={(e) => setHasVariants(e.target.checked)}
+                  className="rounded"
+                />
+                This product has variants
+              </label>
             </div>
-            
-            <div className="space-y-4">
-              {newItem.variants.map((variant, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-gray-700">
-                      Variant {index + 1}
-                    </span>
-                    {newItem.variants.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveVariant(index)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Option name
-                      </label>
-                      <Input
-                        placeholder="e.g., Small, Large"
-                        value={variant.name}
-                        onChange={(e) => handleVariantChange(index, 'name', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Price
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
-                        <Input
-                          type="number"
-                          placeholder="0.00"
-                          value={variant.price}
-                          onChange={(e) => handleVariantChange(index, 'price', parseFloat(e.target.value) || 0)}
-                          className="pl-8"
-                          step="0.01"
-                        />
+
+            {!hasVariants ? (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Base price</label>
+                <div className="relative max-w-xs">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={basePrice}
+                    onChange={(e) => setBasePrice(parseFloat(e.target.value) || 0)}
+                    className="pl-8"
+                    step="0.01"
+                  />
+                </div>
+                <p className="text-xs text-gray-500">A default variant will be created automatically.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-end mb-3">
+                  <Button type="button" variant="outline" size="sm" onClick={handleAddVariant} className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add variant
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  {newItem.variants.map((variant, index) => (
+                    <div key={index} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-gray-700">Variant {index + 1}</span>
+                        {newItem.variants.length > 1 && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveVariant(index)} className="text-red-600 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Option name</label>
+                          <Input placeholder="e.g., Small, Large" value={variant.name} onChange={(e) => handleVariantChange(index, 'name', e.target.value)} />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                            <Input type="number" placeholder="0.00" value={variant.price} onChange={(e) => handleVariantChange(index, 'price', parseFloat(e.target.value) || 0)} className="pl-8" step="0.01" />
+                          </div>
+                        </div>
+                        <div className="flex items-end">
+                          <label className="flex items-center gap-2 text-sm">
+                            <input type="checkbox" checked={variant.isDefault} onChange={(e) => handleVariantChange(index, 'isDefault', e.target.checked)} className="rounded" />
+                            Default option
+                          </label>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-end">
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={variant.isDefault}
-                          onChange={(e) => handleVariantChange(index, 'isDefault', e.target.checked)}
-                          className="rounded"
-                        />
-                        Default option
-                      </label>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </Card>
         </div>
 

@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 
 import {
   BarChart3,
+  Calendar,
   ChefHat,
   FileText,
   Home,
@@ -30,6 +31,7 @@ interface SidebarItem {
 const managerNavItems: SidebarItem[] = [
   { name: 'Dashboard', href: '/manager', icon: Home },
   { name: 'Menu', href: '/manager/menu', icon: ChefHat },
+  { name: 'Availability', href: '/manager/menu/availability', icon: Calendar },
   { name: 'Student Approvals', href: '/manager/approvals', icon: UserCheck },
   { name: 'Orders', href: '/manager/orders', icon: ShoppingBag },
   { name: 'Students', href: '/manager/students', icon: Users },
